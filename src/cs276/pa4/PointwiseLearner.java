@@ -15,35 +15,41 @@ public class PointwiseLearner extends Learner {
 
     /**
      * Populates dataset with rows read from data.
+     * Extracts labels by looking up corresponding
+     * query / url value in labels map.
      * Uses data from idfs to calculate score.
      * Takes in optional indexMap to populate with indices
      */
     private void convertToRowsAndInsert(Instances dataset, Map<Query, List<Document>> data,
-        IdfDictionary idfs, Map<Query, Map<Document, Integer>> indexMap) {
+        Map<String, Map<String, Double>> labels, IdfDictionary idfs,
+        Map<Query, Map<Document, Integer>> indexMap) {
 
         // Build data
         for (Query q : data.keySet()) {
+            // query vector (idf scores)
             Map<String, Double> queryV = super.getQueryFreqs(q, idfs);
             for (Document d : data.get(q)) {
                 double[] instance = new double[6];
                 Map<String, Map<String, Double>> docTermFreqs = super.getDocTermFreqs(d, q);
 
+                // term frequency vector for each field
+                Map<String, Double> urlTFV = docTermFreqs.get("url");
+                Map<String, Double> titleTFV = docTermFreqs.get("title");
+                Map<String, Double> bodyTFV = docTermFreqs.get("body");
+                Map<String, Double> headerTFV = docTermFreqs.get("header");
+                Map<String, Double> anchorTFV = docTermFreqs.get("anchor");
+
+                // construct instance vector of values
                 // order is {url, title, body, header, anchor, relevance_score}
-                Map<String, Double> url_tfs = docTermFreqs.get("url");
-                Map<String, Double> title_tfs = docTermFreqs.get("title");
-                Map<String, Double> body_tfs = docTermFreqs.get("body");
-                Map<String, Double> header_tfs = docTermFreqs.get("header");
-                Map<String, Double> anchor_tfs = docTermFreqs.get("anchor");
+                instance[0] = super.multiplyQueryTermMappings(queryV, urlTFV);
+                instance[1] = super.multiplyQueryTermMappings(queryV, titleTFV);
+                instance[2] = super.multiplyQueryTermMappings(queryV, bodyTFV);
+                instance[3] = super.multiplyQueryTermMappings(queryV, headerTFV);
+                instance[4] = super.multiplyQueryTermMappings(queryV, anchorTFV);
+                if (labels != null) instance[5] = labels.get(q.query).get(d.url);
+                else instance[5] = 0; // for testing, this value is irrelevant
 
-                // construct instance vector
-                instance[0] = super.multiplyQueryTermMappings(queryV, url_tfs);
-                instance[1] = super.multiplyQueryTermMappings(queryV, title_tfs);
-                instance[2] = super.multiplyQueryTermMappings(queryV, body_tfs);
-                instance[3] = super.multiplyQueryTermMappings(queryV, header_tfs);
-                instance[4] = super.multiplyQueryTermMappings(queryV, anchor_tfs);
-                instance[5] = super.getRelevanceScore(q, d, docTermFreqs, idfs);
-
-                // populate index mapping (for testing)
+                // populate index mapping (for test functions)
                 if (indexMap != null) {
                     int idx = dataset.numInstances();
                     if (!indexMap.containsKey(q))
@@ -100,7 +106,7 @@ public class PointwiseLearner extends Learner {
         dataset = new Instances("train_dataset", attributes, 0);
 
         // Build data
-        convertToRowsAndInsert(dataset, trainData, idfs, null);
+        convertToRowsAndInsert(dataset, trainData, relData, idfs, null);
 
         /* Set last attribute as target */
         dataset.setClassIndex(dataset.numAttributes() - 1);
@@ -156,7 +162,7 @@ public class PointwiseLearner extends Learner {
         Map<Query, Map<Document, Integer>> indexMap = new HashMap<Query, Map<Document, Integer>>();
 
         // Build data
-        convertToRowsAndInsert(dataset, testData, idfs, indexMap);
+        convertToRowsAndInsert(dataset, testData, null, idfs, indexMap);
 
         /* Set last attribute as target */
         dataset.setClassIndex(dataset.numAttributes() - 1);
