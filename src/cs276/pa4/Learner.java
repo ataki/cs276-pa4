@@ -36,7 +36,7 @@ public abstract class Learner {
         return sum;
     }
 
-    /* gets cosine similarity score */
+    /* gets cosine similarity score. should maybe consider BM25? */
     protected double getRelevanceScore(Query q, Document d,
          Map<String, Map<String, Double>> tfs,
          IdfDictionary idfs) {

@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
-import cs276.pa4.Util.*;
+import cs276.pa4.Util.IdfDictionary;
 
 import weka.classifiers.Classifier;
 import weka.core.Attribute;
@@ -14,7 +14,6 @@ import weka.core.Instances;
 import weka.classifiers.functions.LinearRegression;
 
 public class PointwiseLearner extends Learner {
-
 
     ///////////////////// Public Methods ////////////////////////////
 
@@ -57,12 +56,11 @@ public class PointwiseLearner extends Learner {
         dataset = new Instances("train_dataset", attributes, 0);
 
         // Build data
-        // TODO Implement sub-linear scaling
         for (Query q : trainData.keySet()) {
-            Map<String, Double> queryV = getQueryFreqs(q, idfs);
+            Map<String, Double> queryV = super.getQueryFreqs(q, idfs);
             for (Document d : trainData.get(q)) {
                 double[] instance = new double[5];
-                Map<String, Map<String, Double>> docTermFreqs = getDocTermFreqs(d, q);
+                Map<String, Map<String, Double>> docTermFreqs = super.getDocTermFreqs(d, q);
 
                 // order is {url, title, body, header, anchor, relevance_score}
                 Map<String, Double> url_tfs = docTermFreqs.get("url");
@@ -71,12 +69,13 @@ public class PointwiseLearner extends Learner {
                 Map<String, Double> header_tfs = docTermFreqs.get("header");
                 Map<String, Double> anchor_tfs = docTermFreqs.get("anchor");
 
-                instance[0] = multiplyQueryTermMappings(queryV, url_tfs);
-                instance[1] = multiplyQueryTermMappings(queryV, title_tfs);
-                instance[2] = multiplyQueryTermMappings(queryV, body_tfs);
-                instance[3] = multiplyQueryTermMappings(queryV, header_tfs);
-                instance[4] = multiplyQueryTermMappings(queryV, anchor_tfs);
-                instance[5] = getRelevanceScore(q, d, docTermFreqs, idfs);
+                // construct instance vector
+                instance[0] = super.multiplyQueryTermMappings(queryV, url_tfs);
+                instance[1] = super.multiplyQueryTermMappings(queryV, title_tfs);
+                instance[2] = super.multiplyQueryTermMappings(queryV, body_tfs);
+                instance[3] = super.multiplyQueryTermMappings(queryV, header_tfs);
+                instance[4] = super.multiplyQueryTermMappings(queryV, anchor_tfs);
+                instance[5] = super.getRelevanceScore(q, d, docTermFreqs, idfs);
 
                 Instance inst = new DenseInstance(1.0, instance);
                 dataset.add(inst);
