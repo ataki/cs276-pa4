@@ -47,7 +47,7 @@ public class PointwiseLearner extends Learner {
                 instance[3] = super.multiplyQueryTermMappings(queryV, headerTFV);
                 instance[4] = super.multiplyQueryTermMappings(queryV, anchorTFV);
                 if (labels != null) instance[5] = labels.get(q.query).get(d.url);
-                else instance[5] = 0; // for testing, this value is irrelevant
+                else instance[5] = 11; // for testing, this value is irrelevant
 
                 // populate index mapping (for test functions)
                 if (indexMap != null) {
@@ -134,10 +134,7 @@ public class PointwiseLearner extends Learner {
         // Features
         Map<Query, List<Document>> testData = null;
 
-        // Labels
-        Map<String, Map<String, Double>> relData = null;
-
-        // Load training data
+        // Load test features
         try {
             testData = Util.loadTrainData(test_data_file);
         }

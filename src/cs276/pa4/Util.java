@@ -13,9 +13,9 @@ public class Util {
 
   public static class IdfDictionary {
     private Map<String, Double> dfs;
-    private int totalDocCount;
+    private double totalDocCount;
 
-    public IdfDictionary(Map<String, Double> dfs, int totalDocCount) {
+    public IdfDictionary(Map<String, Double> dfs, double totalDocCount) {
         this.dfs = dfs;
         this.totalDocCount = totalDocCount;
     }
@@ -31,7 +31,7 @@ public class Util {
             freq = dfs.get(term);
         else
             if (useSmoothing)
-                freq = Math.log((double)(totalDocCount + 1));
+                freq = Math.log(totalDocCount + 1);
         return freq;
     }
 
@@ -111,7 +111,7 @@ public class Util {
 
   public static IdfDictionary loadDFs(String dfFile) throws IOException {
     Map<String,Double> dfs = new HashMap<String, Double>();
-    int totalDocumentCount = 0;
+    double totalDocumentCount = 0;
 
     BufferedReader br = new BufferedReader(new FileReader(dfFile));
     String line;
@@ -120,20 +120,28 @@ public class Util {
       if(line.equals("")) continue;
       String[] tokens = line.split("\\s+");
       dfs.put(tokens[0], Double.parseDouble(tokens[1]));
-      totalDocumentCount++;
+      totalDocumentCount += 1.0;
     }
     br.close();
+
+    // TODO How to remove this hack?
+    // The way we're given the DF's gives us no info about
+    // how many total docs there are. On average, we estimate
+    // that the total document count is (# unique terms) / C
+    // Based on experimentation, C=5.5 seems to be the most
+    // accurate, yielding the highest score.
+
+    totalDocumentCount /= 5.5;
 
     // create idf from dfs
     Map<String, Double> idfs = new HashMap<String, Double>(dfs.keySet().size());
     for (String term : dfs.keySet()) {
         double freq = dfs.get(term);
-        double idf = Math.log(((double)totalDocumentCount + 1.0) / (freq + 1.0));
+        double idf = Math.log((totalDocumentCount + 1.0) / (freq + 1.0));
         idfs.put(term, idf);
     }
 
-    IdfDictionary dict = new IdfDictionary(idfs, totalDocumentCount);
-    return dict;
+    return new IdfDictionary(idfs, totalDocumentCount);
   }
 
   /* query -> (url -> score) */
