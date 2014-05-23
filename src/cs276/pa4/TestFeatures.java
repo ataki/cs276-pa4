@@ -15,5 +15,5 @@ public class TestFeatures {
 	 * For example, you can get the feature for a pair of (query, url) using:
 	 *   features.get(index_map.get(query).get(url));
 	 * */
-	Map<String, Map<String, Integer>> index_map;
+	Map<Query, Map<Document, Integer>> index_map;
 }
