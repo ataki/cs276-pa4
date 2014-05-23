@@ -10,6 +10,33 @@ import java.util.List;
 import java.util.Map;
 
 public class Util {
+
+  public static class IdfDictionary {
+    private Map<String, Double> dfs;
+    private int totalDocCount;
+
+    public IdfDictionary(Map<String, Double> dfs, int totalDocCount) {
+        this.dfs = dfs;
+        this.totalDocCount = totalDocCount;
+    }
+
+    // by default, offer normalization
+    public double getTermFreq(String term) {
+        return getTermFreq(term, true);
+    }
+
+    public double getTermFreq(String term, boolean useSmoothing) {
+        double freq = 0.0;
+        if (dfs.containsKey(term))
+            freq = dfs.get(term);
+        else
+            if (useSmoothing)
+                freq = Math.log((double)(totalDocCount + 1));
+        return freq;
+    }
+
+  }
+
   public static Map<Query,List<Document>> loadTrainData (String feature_file_name) throws Exception {
     Map<Query, List<Document>> result = new HashMap<Query, List<Document>>();
 
@@ -82,8 +109,9 @@ public class Util {
     return result;
   }
 
-  public static Map<String,Double> loadDFs(String dfFile) throws IOException {
+  public static IdfDictionary loadDFs(String dfFile) throws IOException {
     Map<String,Double> dfs = new HashMap<String, Double>();
+    int totalDocumentCount = 0;
 
     BufferedReader br = new BufferedReader(new FileReader(dfFile));
     String line;
@@ -92,9 +120,20 @@ public class Util {
       if(line.equals("")) continue;
       String[] tokens = line.split("\\s+");
       dfs.put(tokens[0], Double.parseDouble(tokens[1]));
+      totalDocumentCount++;
     }
     br.close();
-    return dfs;
+
+    // create idf from dfs
+    Map<String, Double> idfs = new HashMap<String, Double>(dfs.keySet().size());
+    for (String term : dfs.keySet()) {
+        double freq = dfs.get(term);
+        double idf = Math.log(((double)totalDocumentCount + 1.0) / (freq + 1.0));
+        idfs.put(term, idf);
+    }
+
+    IdfDictionary dict = new IdfDictionary(idfs, totalDocumentCount);
+    return dict;
   }
 
   /* query -> (url -> score) */

@@ -10,12 +10,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import cs276.pa4.Util.IdfDictionary;
+
 import weka.classifiers.Classifier;
 import weka.core.Instances;
 
 public class Learning2Rank {
 	
-	public static Classifier train(String train_data_file, String train_rel_file, int task, Map<String,Double> idfs) {
+	public static Classifier train(String train_data_file, String train_rel_file, int task, IdfDictionary idfs) {
 	    System.err.println("## Training with feature_file =" + train_data_file + ", rel_file = " + train_rel_file + " ... \n");
 	    Classifier model = null;
 	    Learner learner = null;
@@ -50,7 +52,7 @@ public class Learning2Rank {
 	    return model;
 	  }
 
-	 public static Map<String, List<String>> test(String test_data_file, Classifier model, int task, Map<String,Double> idfs){
+	 public static Map<String, List<String>> test(String test_data_file, Classifier model, int task, IdfDictionary idfs){
 		 	System.err.println("## Testing with feature_file=" + test_data_file + " ... \n");
 		    Map<String, List<String>> ranked_queries = new HashMap<String, List<String>>();
 		    Learner learner = null;
@@ -118,7 +120,7 @@ public class Learning2Rank {
 
 	    /* Populate idfs */
 	    String dfFile = "df.txt";
-	    Map<String,Double> idfs = null;
+	    IdfDictionary idfs = null;
 	    try {
 	      idfs = Util.loadDFs(dfFile);
 	    } catch(IOException e){

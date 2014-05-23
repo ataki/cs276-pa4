@@ -2,6 +2,7 @@ package cs276.pa4;
 
 import java.util.List;
 import java.util.Map;
+import cs276.pa4.Util.IdfDictionary;
 
 import weka.classifiers.Classifier;
 import weka.classifiers.functions.LibSVM;
@@ -38,7 +39,7 @@ public class PairwiseLearner extends Learner {
   
 	@Override
 	public Instances extract_train_features(String train_data_file,
-			String train_rel_file, Map<String, Double> idfs) {
+			String train_rel_file, IdfDictionary idfs) {
 		/*
 		 * @TODO: Your code here
 		 */
@@ -55,7 +56,7 @@ public class PairwiseLearner extends Learner {
 
 	@Override
 	public TestFeatures extract_test_features(String test_data_file,
-			Map<String, Double> idfs) {
+			IdfDictionary idfs) {
 		/*
 		 * @TODO: Your code here
 		 */
