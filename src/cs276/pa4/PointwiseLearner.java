@@ -59,7 +59,7 @@ public class PointwiseLearner extends Learner {
         for (Query q : trainData.keySet()) {
             Map<String, Double> queryV = super.getQueryFreqs(q, idfs);
             for (Document d : trainData.get(q)) {
-                double[] instance = new double[5];
+                double[] instance = new double[6];
                 Map<String, Map<String, Double>> docTermFreqs = super.getDocTermFreqs(d, q);
 
                 // order is {url, title, body, header, anchor, relevance_score}

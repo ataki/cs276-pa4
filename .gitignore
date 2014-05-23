@@ -2,3 +2,5 @@ cs276-pa4.sublime-project
 cs276-pa4.sublime-workspace
 .idea
 bin
+src/cs276/pa4/*.class
+tmp.train.ranked
