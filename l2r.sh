@@ -19,5 +19,5 @@ fi
 
 #echo ""
 #echo "# Executing: java -cp bin:lib/weka.jar cs276.pa4.Rank $train_signal_file $train_rel_file $test_signal_file $task $out_file"
-java -cp bin:lib/weka.jar cs276.pa4.Rank $train_signal_file $train_rel_file $test_signal_file $task $out_file
+java -cp bin:lib/weka.jar cs276.pa4.Learning2Rank $train_signal_file $train_rel_file $test_signal_file $task $out_file
 
