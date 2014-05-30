@@ -52,6 +52,7 @@ import java.util.StringTokenizer;
 import java.util.Vector;
 
 import libsvm.svm_model;
+import libsvm.svm_node;
 
 /*
  * Modifications by FracPete:
@@ -1732,35 +1733,45 @@ public class LibSVM
    
   /**
    * Thang May14: extract weights for linear SVM. 
+   * With Konstantin's fix. https://piazza.com/class/hrvd1bgf1weds?cid=593.
    * Based on the instruction here http://www.csie.ntu.edu.tw/~cjlin/libsvm/faq.html#f804.
+   * Note that the sign might be negated. It's best to use the classifyInstance method.
    * 
    * @return the weights array contains (number of features + 1) coefficients. 
    * One coefficient for each attribute and one coefficient for the intercept.
    */
   public double[] coefficients() {
-    svm_model svm_linear_model = (svm_model) m_Model;   
-    int numAttributes = svm_linear_model.SV[0].length;
-    double[] w = new double[numAttributes + 1];
-
-    if(m_KernelType==KERNELTYPE_LINEAR){
-      int numSupportVectors = svm_linear_model.SV.length;
-      if(numSupportVectors==0) { throw new RuntimeException("Zero support vector"); }
-      for (int i = 0; i < numAttributes; i++) {
-        w[i]=0;
-        for (int j = 0; j < numSupportVectors; j++) {
-          if(i<svm_linear_model.SV[j].length){
-            w[i] += svm_linear_model.SV[j][i].value*svm_linear_model.sv_coef[0][j];
-          }
-        }
-      }
-      w[numAttributes] = -svm_linear_model.rho[0];
-      if(svm_linear_model.label[0]==-1){
-        for (int i = 0; i < w.length; i++) { // negate weights
-          w[i] = -w[i];
-        }
-      }
-      // System.err.println("# Linear SVM: w=" + Arrays.toString(w));
+    if (m_KernelType != KERNELTYPE_LINEAR) {
+      throw new RuntimeException("Can't fetch coefficients for non-linear kernels.");
     }
+    System.err.println("LibSVM get coefficients: note that the sign might be negated. It's best to use the classifyInstance method.");
+
+    svm_model svm_linear_model = (svm_model) m_Model;   
+    int numAttributes = 0;
+    for (svm_node[] nodes : svm_linear_model.SV) {
+      for (svm_node node : nodes) {
+        numAttributes = Math.max(numAttributes, node.index);
+      }
+    }
+    
+    double[] w = new double[numAttributes + 1];
+    Arrays.fill(w, 0.0);
+    for (int sv = 0; sv < svm_linear_model.SV.length; sv++) {
+      for (svm_node node : svm_linear_model.SV[sv]) {
+        w[node.index - 1] += svm_linear_model.sv_coef[0][sv] * node.value;
+      }
+    }
+    
+    w[numAttributes] = -svm_linear_model.rho[0];
+    
+    // note that the sign might be negated. It's best to use the classifyInstance method.
+    // http://www.csie.ntu.edu.tw/~cjlin/libsvm/faq.html#f804
+//    if (svm_linear_model.label[0] == 0) {
+//      for (int i = 0; i < w.length; i++) { // negate weights
+//        w[i] = -w[i];
+//      }
+//    }
+    
     return w;
   }
     

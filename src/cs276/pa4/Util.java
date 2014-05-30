@@ -111,7 +111,8 @@ public class Util {
 
   public static IdfDictionary loadDFs(String dfFile) throws IOException {
     Map<String,Double> dfs = new HashMap<String, Double>();
-    double totalDocumentCount = 0;
+    // based on Piazza post @574
+    double totalDocumentCount = 98998;
 
     BufferedReader br = new BufferedReader(new FileReader(dfFile));
     String line;
@@ -120,18 +121,8 @@ public class Util {
       if(line.equals("")) continue;
       String[] tokens = line.split("\\s+");
       dfs.put(tokens[0], Double.parseDouble(tokens[1]));
-      totalDocumentCount += 1.0;
     }
     br.close();
-
-    // TODO How to remove this hack?
-    // The way we're given the DF's gives us no info about
-    // how many total docs there are. On average, we estimate
-    // that the total document count is (# unique terms) / C
-    // Based on experimentation, C=5.5 seems to be the most
-    // accurate, yielding the highest score.
-
-    totalDocumentCount /= 5.5;
 
     // create idf from dfs
     Map<String, Double> idfs = new HashMap<String, Double>(dfs.keySet().size());
