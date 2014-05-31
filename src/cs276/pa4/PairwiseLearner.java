@@ -42,9 +42,20 @@ public class PairwiseLearner extends Learner {
         }
     }
   
+    /* Instance is a length-12 array of doubles; the first 5 entries
+     * represent features of x1 and the latter 6 represent features of x2. 
+     * The last field of "instance" will be filled with the classification
+     */
+    private Instance constructInstanceFromQueryDocPair(double[] instance, double x1Score, double x2Score) {
+        assert instance.length == 11;
+        int classif = x1Score > x2Score ? 1 : -1;
+        instance[10] = (double)classif;
+        return new DenseInstance(1.0, instance);
+    }
 
     /**
-     * Populates dataset with rows read from data.
+     * convertToRowsAndInsert.
+     * Populates dataset with pairs of rows read from data.
      * Extracts labels by looking up corresponding
      * query / url value in labels map.
      * Uses data from idfs to calculate score.
@@ -58,26 +69,51 @@ public class PairwiseLearner extends Learner {
         for (Query q : data.keySet()) {
             // query vector (idf scores)
             Map<String, Double> queryV = super.getQueryFreqs(q, idfs);
-            for (Document d : data.get(q)) {
-                double[] instance = new double[6];
-                Map<String, Map<String, Double>> docTermFreqs = super.getDocTermFreqs(d, q);
+            List<Document> documentList = data.get(q);
+
+            for (int i = 0; i < documentList.size(); i++) {
+                double[] instance = new double[11];
+
+                // compute first doc (x1) values
+
+                Document d1 = documentList.get(i);
+                Map<String, Map<String, Double>> d1TFs = super.getDocTermFreqs(d1, q);
 
                 // term frequency vector for each field
-                Map<String, Double> urlTFV = docTermFreqs.get("url");
-                Map<String, Double> titleTFV = docTermFreqs.get("title");
-                Map<String, Double> bodyTFV = docTermFreqs.get("body");
-                Map<String, Double> headerTFV = docTermFreqs.get("header");
-                Map<String, Double> anchorTFV = docTermFreqs.get("anchor");
+                Map<String, Double> d1UrlTFV = d1TFs.get("url");
+                Map<String, Double> d1TitleTFV = d1TFs.get("title");
+                Map<String, Double> d1BodyTFV = d1TFs.get("body");
+                Map<String, Double> d1HeaderTFV = d1TFs.get("header");
+                Map<String, Double> d1AnchorTFV = d1TFs.get("anchor");
 
-                // construct instance vector of values
-                // order is {url, title, body, header, anchor, relevance_score}
-                instance[0] = super.multiplyQueryTermMappings(queryV, urlTFV);
-                instance[1] = super.multiplyQueryTermMappings(queryV, titleTFV);
-                instance[2] = super.multiplyQueryTermMappings(queryV, bodyTFV);
-                instance[3] = super.multiplyQueryTermMappings(queryV, headerTFV);
-                instance[4] = super.multiplyQueryTermMappings(queryV, anchorTFV);
-                if (labels != null) instance[5] = labels.get(q.query).get(d.url);
-                else instance[5] = 11; // for testing, this value is irrelevant
+                // order is {url, title, body, header, anchor, relevance_class}
+                instance[0] = super.multiplyQueryTermMappings(queryV, d1UrlTFV);
+                instance[1] = super.multiplyQueryTermMappings(queryV, d1TitleTFV);
+                instance[2] = super.multiplyQueryTermMappings(queryV, d1BodyTFV);
+                instance[3] = super.multiplyQueryTermMappings(queryV, d1HeaderTFV);
+                instance[4] = super.multiplyQueryTermMappings(queryV, d1AnchorTFV);
+
+                for (int j = 0; j < i; j++) {
+                    Document d2 = documentList.get(j);
+                    Map<String, Map<String, Double>> d2TFs = super.getDocTermFreqs(d2, q);
+
+                    // term frequency vector for each field
+                    Map<String, Double> d2UrlTFV = d2TFs.get("url");
+                    Map<String, Double> d2TitleTFV = d2TFs.get("title");
+                    Map<String, Double> d2BodyTFV = d2TFs.get("body");
+                    Map<String, Double> d2HeaderTFV = d2TFs.get("header");
+                    Map<String, Double> d2AnchorTFV = d2TFs.get("anchor");
+
+                    instance[5] = super.multiplyQueryTermMappings(queryV, d2UrlTFV);
+                    instance[6] = super.multiplyQueryTermMappings(queryV, d2TitleTFV);
+                    instance[7] = super.multiplyQueryTermMappings(queryV, d2BodyTFV);
+                    instance[8] = super.multiplyQueryTermMappings(queryV, d2HeaderTFV);
+                    instance[9] = super.multiplyQueryTermMappings(queryV, d2AnchorTFV);
+
+                    double score1 = labels.get(q.query).get(d1.url);
+                    double score2 = labels.get(q.query).get(d2.url);
+                    dataset.add(constructInstanceFromQueryDocPair(instance, score1, score2));
+                }
 
                 // populate index mapping (for test functions)
                 if (indexMap != null) {
@@ -85,12 +121,9 @@ public class PairwiseLearner extends Learner {
                     if (!indexMap.containsKey(q))
                         indexMap.put(q, new HashMap<Document, Integer>());
                     Map<Document, Integer> mapping = indexMap.get(q);
-                    if (!mapping.containsKey(d))
-                        mapping.put(d, idx);
+                    if (!mapping.containsKey(d1))
+                        mapping.put(d1, idx);
                 }
-
-                Instance inst = new DenseInstance(1.0, instance);
-                dataset.add(inst);
             }
         }
     }
@@ -130,12 +163,20 @@ public class PairwiseLearner extends Learner {
         Instances dataset = null;
 
         ArrayList<Attribute> attributes = new ArrayList<Attribute>();
-        attributes.add(new Attribute("url_w"));
-        attributes.add(new Attribute("title_w"));
-        attributes.add(new Attribute("body_w"));
-        attributes.add(new Attribute("header_w"));
-        attributes.add(new Attribute("anchor_w"));
-        attributes.add(new Attribute("relevance_score"));
+        // x1
+        attributes.add(new Attribute("url_w_1"));
+        attributes.add(new Attribute("title_w_1"));
+        attributes.add(new Attribute("body_w_1"));
+        attributes.add(new Attribute("header_w_1"));
+        attributes.add(new Attribute("anchor_w_1"));
+        // x2
+        attributes.add(new Attribute("url_w_2"));
+        attributes.add(new Attribute("title_w_2"));
+        attributes.add(new Attribute("body_w_2"));
+        attributes.add(new Attribute("header_w_2"));
+        attributes.add(new Attribute("anchor_w_2"));
+        // label (+1 or -1)
+        attributes.add(new Attribute("relevance_class"));
         dataset = new Instances("train_dataset", attributes, 0);
 
         // Build data
@@ -187,12 +228,20 @@ public class PairwiseLearner extends Learner {
         Instances dataset = null;
 
         ArrayList<Attribute> attributes = new ArrayList<Attribute>();
-        attributes.add(new Attribute("url_w"));
-        attributes.add(new Attribute("title_w"));
-        attributes.add(new Attribute("body_w"));
-        attributes.add(new Attribute("header_w"));
-        attributes.add(new Attribute("anchor_w"));
-        attributes.add(new Attribute("relevance_score"));
+        // x1
+        attributes.add(new Attribute("url_w_1"));
+        attributes.add(new Attribute("title_w_1"));
+        attributes.add(new Attribute("body_w_1"));
+        attributes.add(new Attribute("header_w_1"));
+        attributes.add(new Attribute("anchor_w_1"));
+        // x2
+        attributes.add(new Attribute("url_w_2"));
+        attributes.add(new Attribute("title_w_2"));
+        attributes.add(new Attribute("body_w_2"));
+        attributes.add(new Attribute("header_w_2"));
+        attributes.add(new Attribute("anchor_w_2"));
+        // label (+1 or -1)
+        attributes.add(new Attribute("relevance_class"));
         dataset = new Instances("test_dataset", attributes, 0);
 
         // tracks map of (Query -> (Document, Index)) in our data
